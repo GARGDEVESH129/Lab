@@ -1,0 +1,103 @@
+#include <stdio.h>
+#include <stdbool.h>
+
+#define ROWS 5
+#define COLS 5
+
+// Maze representation
+char maze[ROWS][COLS] = {
+    { 'S', '.', '.', '#', '.' },
+    { '#', '#', '.', '#', '.' },
+    { '.', '.', '.', '.', '.' },
+    { '.', '#', '#', '#', '.' },
+    { '.', '.', '.', '#', 'G' }
+};
+
+typedef struct {
+    int row;
+    int col;
+} Node;
+
+Node came_from[ROWS][COLS];
+bool visited[ROWS][COLS];
+
+// Directions: up, down, left, right
+int directions[4][2] = {
+    {-1, 0}, {1, 0}, {0, -1}, {0, 1}
+};
+
+// Check if cell is valid and not visited or wall
+bool isValid(int row, int col) {
+    return row >= 0 && row < ROWS &&
+           col >= 0 && col < COLS &&
+           maze[row][col] != '#' &&
+           !visited[row][col];
+}
+
+// Recursive DFS function
+bool dfs(Node current, Node goal) {
+    visited[current.row][current.col] = true;
+
+    if (current.row == goal.row && current.col == goal.col)
+        return true;
+
+    for (int i = 0; i < 4; i++) {
+        int newRow = current.row + directions[i][0];
+        int newCol = current.col + directions[i][1];
+
+        if (isValid(newRow, newCol)) {
+            came_from[newRow][newCol] = current;
+
+            if (dfs((Node){newRow, newCol}, goal))
+                return true;
+        }
+    }
+
+    return false;
+}
+
+// Print the final path
+void printPath(Node start, Node goal) {
+    Node path[ROWS * COLS];
+    int pathLength = 0;
+    Node current = goal;
+
+    while (!(current.row == start.row && current.col == start.col)) {
+        path[pathLength++] = current;
+        current = came_from[current.row][current.col];
+    }
+    path[pathLength++] = start;
+
+    for (int i = pathLength - 1; i >= 0; i--) {
+        Node n = path[i];
+        if (maze[n.row][n.col] != 'S' && maze[n.row][n.col] != 'G')
+            maze[n.row][n.col] = '*';
+    }
+
+    printf("\nPath Found (DFS):\n");
+    for (int i = 0; i < ROWS; i++) {
+        for (int j = 0; j < COLS; j++)
+            printf("%c ", maze[i][j]);
+        printf("\n");
+    }
+}
+
+int main() {
+    Node start, goal;
+
+    // Initialize visited and locate start/goal
+    for (int i = 0; i < ROWS; i++)
+        for (int j = 0; j < COLS; j++) {
+            visited[i][j] = false;
+            if (maze[i][j] == 'S') start = (Node){i, j};
+            if (maze[i][j] == 'G') goal = (Node){i, j};
+        }
+
+    if (dfs(start, goal)) {
+        printPath(start, goal);
+    } else {
+        printf("No path found!\n");
+    }
+
+    return 0;
+}
