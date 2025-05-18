@@ -1,0 +1,132 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+
+#define ROWS 5
+#define COLS 5
+
+char maze[ROWS][COLS] = {
+    { 'S', '.', '.', '#', '.' },
+    { '#', '#', '.', '#', '.' },
+    { '.', '.', '.', '.', '.' },
+    { '.', '#', '#', '#', '.' },
+    { '.', '.', '.', '#', 'G' }
+};
+
+typedef struct {
+    int row;
+    int col;
+} Node;
+
+Node came_from[ROWS][COLS];
+bool visited[ROWS][COLS];
+
+int directions[4][2] = {
+    { -1, 0 }, // Up
+    { 1, 0 },  // Down
+    { 0, -1 }, // Left
+    { 0, 1 }   // Right
+};
+
+// Queue for BFS
+typedef struct {
+    Node nodes[ROWS * COLS];
+    int front, rear;
+} Queue;
+
+void initQueue(Queue* q) {
+    q->front = q->rear = 0;
+}
+
+bool isEmpty(Queue* q) {
+    return q->front == q->rear;
+}
+
+void enqueue(Queue* q, Node n) {
+    q->nodes[q->rear++] = n;
+}
+
+Node dequeue(Queue* q) {
+    return q->nodes[q->front++];
+}
+
+bool isValid(int row, int col) {
+    return row >= 0 && row < ROWS && col >= 0 && col < COLS && maze[row][col] != '#' && !visited[row][col];
+}
+
+// BFS Search
+bool bfs(Node start, Node goal) {
+    Queue q;
+    initQueue(&q);
+    enqueue(&q, start);
+    visited[start.row][start.col] = true;
+
+    while (!isEmpty(&q)) {
+        Node current = dequeue(&q);
+        if (current.row == goal.row && current.col == goal.col)
+            return true;
+
+        for (int i = 0; i < 4; i++) {
+            int newRow = current.row + directions[i][0];
+            int newCol = current.col + directions[i][1];
+
+            if (isValid(newRow, newCol)) {
+                visited[newRow][newCol] = true;
+                came_from[newRow][newCol] = current;
+                enqueue(&q, (Node){ newRow, newCol });
+            }
+        }
+    }
+    return false;
+}
+
+// Print path from start to goal
+void printPath(Node start, Node goal) {
+    Node path[ROWS * COLS];
+    int pathLength = 0;
+    Node current = goal;
+
+    while (!(current.row == start.row && current.col == start.col)) {
+        path[pathLength++] = current;
+        current = came_from[current.row][current.col];
+    }
+    path[pathLength++] = start;
+
+    // Mark path on maze
+    for (int i = pathLength - 1; i >= 0; i--) {
+        Node n = path[i];
+        if (maze[n.row][n.col] != 'S' && maze[n.row][n.col] != 'G')
+            maze[n.row][n.col] = '*';
+    }
+
+    // Print maze with path
+    printf("\nPath Found (BFS):\n");
+    for (int i = 0; i < ROWS; i++) {
+        for (int j = 0; j < COLS; j++) {
+            printf("%c ", maze[i][j]);
+        }
+        printf("\n");
+    }
+}
+
+int main() {
+    Node start, goal;
+
+    // Find start and goal
+    for (int i = 0; i < ROWS; i++)
+        for (int j = 0; j < COLS; j++) {
+            visited[i][j] = false;
+            if (maze[i][j] == 'S')
+                start = (Node){ i, j };
+            else if (maze[i][j] == 'G')
+                goal = (Node){ i, j };
+        }
+
+    if (bfs(start, goal)) {
+        printPath(start, goal);
+    } else {
+        printf("No path found!\n");
+    }
+
+    return 0;
+}
