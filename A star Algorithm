@@ -1,0 +1,149 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <math.h>
+
+#define ROW 5
+#define COL 5
+
+typedef struct {
+    int row, col;
+} Point;
+
+typedef struct {
+    Point pt;
+    int g, h, f;
+    Point parent;
+} Node;
+
+char grid[ROW][COL] = {
+    { 'S', '.', '.', '#', '.' },
+    { '#', '#', '.', '#', '.' },
+    { '.', '.', '.', '.', '.' },
+    { '.', '#', '#', '#', '.' },
+    { '.', '.', '.', '#', 'G' }
+};
+
+int dir[4][2] = { {-1,0}, {1,0}, {0,-1}, {0,1} }; // Up, Down, Left, Right
+
+bool isValid(int r, int c) {
+    return (r >= 0 && r < ROW && c >= 0 && c < COL && grid[r][c] != '#');
+}
+
+int heuristic(Point a, Point b) {
+    // Manhattan distance
+    return abs(a.row - b.row) + abs(a.col - b.col);
+}
+
+bool isSame(Point a, Point b) {
+    return a.row == b.row && a.col == b.col;
+}
+
+void printPath(Point cameFrom[ROW][COL], Point start, Point goal) {
+    Point path[ROW * COL];
+    int len = 0;
+    Point cur = goal;
+
+    while (!isSame(cur, start)) {
+        path[len++] = cur;
+        cur = cameFrom[cur.row][cur.col];
+    }
+    path[len++] = start;
+
+    for (int i = len - 1; i >= 0; i--) {
+        Point p = path[i];
+        if (grid[p.row][p.col] != 'S' && grid[p.row][p.col] != 'G')
+            grid[p.row][p.col] = '*';
+    }
+
+    printf("\nPath (A*):\n");
+    for (int i = 0; i < ROW; i++) {
+        for (int j = 0; j < COL; j++)
+            printf("%c ", grid[i][j]);
+        printf("\n");
+    }
+}
+
+void AStar(Point start, Point goal) {
+    bool closedList[ROW][COL] = { false };
+    Point cameFrom[ROW][COL];
+
+    Node openList[ROW * COL];
+    int openCount = 0;
+
+    Node startNode = { start, 0, heuristic(start, goal), 0, {-1, -1} };
+    startNode.f = startNode.g + startNode.h;
+    openList[openCount++] = startNode;
+
+    while (openCount > 0) {
+        // Find node with lowest f
+        int bestIdx = 0;
+        for (int i = 1; i < openCount; i++) {
+            if (openList[i].f < openList[bestIdx].f)
+                bestIdx = i;
+        }
+
+        Node current = openList[bestIdx];
+        // Remove current
+        openList[bestIdx] = openList[--openCount];
+
+        if (isSame(current.pt, goal)) {
+            cameFrom[goal.row][goal.col] = current.parent;
+            printPath(cameFrom, start, goal);
+            return;
+        }
+
+        closedList[current.pt.row][current.pt.col] = true;
+
+        for (int i = 0; i < 4; i++) {
+            int nr = current.pt.row + dir[i][0];
+            int nc = current.pt.col + dir[i][1];
+            Point neighbor = { nr, nc };
+
+            if (!isValid(nr, nc) || closedList[nr][nc])
+                continue;
+
+            int tentative_g = current.g + 1;
+
+            bool inOpen = false;
+            for (int j = 0; j < openCount; j++) {
+                if (isSame(openList[j].pt, neighbor)) {
+                    inOpen = true;
+                    if (tentative_g < openList[j].g) {
+                        openList[j].g = tentative_g;
+                        openList[j].f = tentative_g + openList[j].h;
+                        openList[j].parent = current.pt;
+                        cameFrom[nr][nc] = current.pt;
+                    }
+                    break;
+                }
+            }
+
+            if (!inOpen) {
+                Node neighborNode;
+                neighborNode.pt = neighbor;
+                neighborNode.g = tentative_g;
+                neighborNode.h = heuristic(neighbor, goal);
+                neighborNode.f = neighborNode.g + neighborNode.h;
+                neighborNode.parent = current.pt;
+                openList[openCount++] = neighborNode;
+                cameFrom[nr][nc] = current.pt;
+            }
+        }
+    }
+
+    printf("No path found!\n");
+}
+
+int main() {
+    Point start, goal;
+
+    for (int i = 0; i < ROW; i++)
+        for (int j = 0; j < COL; j++) {
+            if (grid[i][j] == 'S') start = (Point){i, j};
+            if (grid[i][j] == 'G') goal = (Point){i, j};
+        }
+
+    AStar(start, goal);
+    return 0;
+}
