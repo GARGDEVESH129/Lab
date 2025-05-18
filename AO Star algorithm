@@ -1,0 +1,91 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+
+#define MAX 10
+
+typedef struct {
+    int node;
+    int cost;
+} Child;
+
+typedef struct {
+    int id;
+    int n_children;
+    Child children[MAX];
+    bool isAND;
+} GraphNode;
+
+GraphNode graph[MAX];
+int solved[MAX];
+int cost[MAX];
+
+// Utility function to create a node
+void addNode(int id, int isAND, int n_children, Child children[]) {
+    graph[id].id = id;
+    graph[id].isAND = isAND;
+    graph[id].n_children = n_children;
+    for (int i = 0; i < n_children; i++) {
+        graph[id].children[i] = children[i];
+    }
+}
+
+// AO* recursive function
+int AOStar(int node) {
+    if (solved[node]) return cost[node];
+
+    GraphNode curr = graph[node];
+
+    if (curr.n_children == 0) {
+        solved[node] = 1;
+        return cost[node]; // terminal
+    }
+
+    int minCost = 1e9;
+
+    if (curr.isAND) {
+        int total = 0;
+        for (int i = 0; i < curr.n_children; i++) {
+            int c = AOStar(curr.children[i].node);
+            total += c + curr.children[i].cost;
+        }
+        minCost = total;
+    } else {
+        for (int i = 0; i < curr.n_children; i++) {
+            int c = AOStar(curr.children[i].node);
+            int total = c + curr.children[i].cost;
+            if (total < minCost) {
+                minCost = total;
+            }
+        }
+    }
+
+    solved[node] = 1;
+    cost[node] = minCost;
+    return minCost;
+}
+
+int main() {
+    // Leaf nodes with 0 cost (terminal)
+    cost[3] = 1; solved[3] = 1; // D
+    cost[4] = 2; solved[4] = 1; // E
+    cost[5] = 2; solved[5] = 1; // F
+    cost[6] = 3; solved[6] = 1; // G
+
+    // B → D or E
+    Child b_children[] = {{3, 1}, {4, 1}};
+    addNode(1, 0, 2, b_children);
+
+    // C → F or G
+    Child c_children[] = {{5, 1}, {6, 1}};
+    addNode(2, 0, 2, c_children);
+
+    // A → B and C
+    Child a_children[] = {{1, 1}, {2, 1}};
+    addNode(0, 1, 2, a_children);
+
+    int result = AOStar(0);
+    printf("Minimum cost to solve problem A: %d\n", result);
+
+    return 0;
+}
